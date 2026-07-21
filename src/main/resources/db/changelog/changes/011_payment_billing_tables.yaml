@@ -1,0 +1,240 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 011 — Payment/Billing Tables
+  # Retrofits Liquibase coverage for plans / user_subscriptions / payments,
+  # which up to now only existed via hibernate.ddl-auto: update. Every changeset
+  # is guarded with a preCondition so it's a no-op on environments where the
+  # table/column already exists (created by ddl-auto) and creates it correctly
+  # on a fresh database.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 011-01-create-plans
+      author: allocator
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: plans
+      changes:
+        - createTable:
+            tableName: plans
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: stripe_price_id
+                  type: varchar(255)
+                  constraints:
+                    unique: true
+              - column:
+                  name: stripe_product_id
+                  type: varchar(255)
+              - column:
+                  name: amount
+                  type: numeric(10,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interval
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tier
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+
+  - changeSet:
+      id: 011-02-create-user-subscriptions
+      author: allocator
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: user_subscriptions
+      changes:
+        - createTable:
+            tableName: user_subscriptions
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: plan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_user_subscriptions_plan
+                    references: plans(id)
+              - column:
+                  name: stripe_customer_id
+                  type: varchar(255)
+              - column:
+                  name: stripe_subscription_id
+                  type: varchar(255)
+                  constraints:
+                    unique: true
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: current_period_start
+                  type: timestamp
+              - column:
+                  name: current_period_end
+                  type: timestamp
+              - column:
+                  name: cancel_at_period_end
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cancellation_reason
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+
+  - changeSet:
+      id: 011-04-create-payments
+      author: allocator
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: payments
+      changes:
+        - createTable:
+            tableName: payments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: subscription_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: stripe_payment_intent_id
+                  type: varchar(255)
+              - column:
+                  name: stripe_invoice_id
+                  type: varchar(255)
+                  constraints:
+                    unique: true
+              - column:
+                  name: amount
+                  type: numeric(10,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid_at
+                  type: timestamp
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+
+  # Covers environments where user_subscriptions already existed (via ddl-auto)
+  # before the cancellationReason field was added to the entity.
+  - changeSet:
+      id: 011-05-add-cancellation-reason
+      author: allocator
+      preConditions:
+        onFail: MARK_RAN
+        and:
+          - tableExists:
+              tableName: user_subscriptions
+          - not:
+              columnExists:
+                tableName: user_subscriptions
+                columnName: cancellation_reason
+      changes:
+        - addColumn:
+            tableName: user_subscriptions
+            columns:
+              - column:
+                  name: cancellation_reason
+                  type: text

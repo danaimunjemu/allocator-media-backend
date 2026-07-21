@@ -1,0 +1,58 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 018 — Saved content ("bookmarks")
+  # Lets a logged-in reader save a published article/paper/episode to read
+  # later, and lists them back on their account's "Saved Posts" page.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 018-01
+      author: system
+      changes:
+        - createTable:
+            tableName: saved_content
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: saved_content
+            columnNames: user_id, content_id
+            constraintName: uq_saved_content_user_content
+        - createIndex:
+            tableName: saved_content
+            indexName: idx_saved_content_user_id
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: saved_content
+            indexName: idx_saved_content_content_id
+            columns:
+              - column:
+                  name: content_id

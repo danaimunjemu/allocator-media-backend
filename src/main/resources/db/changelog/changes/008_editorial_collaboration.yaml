@@ -1,0 +1,673 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 008 — Editorial Collaboration Platform
+  # Tables: editorial_comments, editorial_annotations, review_requests,
+  #         editorial_tasks, in_app_notifications, edit_locks
+  # All collaboration events are logged into the existing workflow_audit_log.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── 008-01: editorial_comments ────────────────────────────────────────────
+  # Stores both root-level comments and threaded replies.
+  # parent_comment_id = NULL → root comment
+  # parent_comment_id = some UUID → reply in the thread
+  # Anchor fields allow the comment to be tied to a text selection.
+  # anchor_status tracks whether the anchor is still valid after a content revision.
+  - changeSet:
+      id: 008-01
+      author: system
+      changes:
+        - createTable:
+            tableName: editorial_comments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: parent_comment_id
+                  type: uuid
+              - column:
+                  name: author_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_role
+                  type: varchar(50)
+              - column:
+                  name: body
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: OPEN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: anchor_start
+                  type: int
+              - column:
+                  name: anchor_end
+                  type: int
+              - column:
+                  name: anchor_text
+                  type: varchar(1000)
+              - column:
+                  name: content_version_number
+                  type: int
+              - column:
+                  name: anchor_status
+                  type: varchar(20)
+                  defaultValue: VALID
+              - column:
+                  name: resolved_by
+                  type: uuid
+              - column:
+                  name: resolved_at
+                  type: timestamptz
+              - column:
+                  name: deleted_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+              - column:
+                  name: created_by
+                  type: uuid
+              - column:
+                  name: updated_by
+                  type: uuid
+
+  # ── 008-02: Indexes for editorial_comments ────────────────────────────────
+  - changeSet:
+      id: 008-02
+      author: system
+      changes:
+        - createIndex:
+            tableName: editorial_comments
+            indexName: idx_ec_content_id
+            columns:
+              - column:
+                  name: content_id
+        - createIndex:
+            tableName: editorial_comments
+            indexName: idx_ec_brand_id
+            columns:
+              - column:
+                  name: brand_id
+        - createIndex:
+            tableName: editorial_comments
+            indexName: idx_ec_parent_comment_id
+            columns:
+              - column:
+                  name: parent_comment_id
+        - createIndex:
+            tableName: editorial_comments
+            indexName: idx_ec_author_id
+            columns:
+              - column:
+                  name: author_id
+        - createIndex:
+            tableName: editorial_comments
+            indexName: idx_ec_content_status
+            columns:
+              - column:
+                  name: content_id
+              - column:
+                  name: status
+
+  # ── 008-03: editorial_annotations ────────────────────────────────────────
+  # Formal typed review annotations: Editorial, Compliance, Legal,
+  # Fact Check, Research Review, Style Review.
+  # Annotations are distinct from casual comments — they carry role authority
+  # and formal resolution tracking (who resolved, when, with what note).
+  - changeSet:
+      id: 008-03
+      author: system
+      changes:
+        - createTable:
+            tableName: editorial_annotations
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: annotator_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: annotator_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: annotator_role
+                  type: varchar(50)
+              - column:
+                  name: annotation_type
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: body
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: anchor_start
+                  type: int
+              - column:
+                  name: anchor_end
+                  type: int
+              - column:
+                  name: anchor_text
+                  type: varchar(1000)
+              - column:
+                  name: content_version_number
+                  type: int
+              - column:
+                  name: anchor_status
+                  type: varchar(20)
+                  defaultValue: VALID
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: OPEN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: resolved_by
+                  type: uuid
+              - column:
+                  name: resolved_at
+                  type: timestamptz
+              - column:
+                  name: resolved_note
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+              - column:
+                  name: created_by
+                  type: uuid
+              - column:
+                  name: updated_by
+                  type: uuid
+
+  # ── 008-04: Indexes for editorial_annotations ─────────────────────────────
+  - changeSet:
+      id: 008-04
+      author: system
+      changes:
+        - createIndex:
+            tableName: editorial_annotations
+            indexName: idx_ea_content_id
+            columns:
+              - column:
+                  name: content_id
+        - createIndex:
+            tableName: editorial_annotations
+            indexName: idx_ea_annotator_id
+            columns:
+              - column:
+                  name: annotator_id
+        - createIndex:
+            tableName: editorial_annotations
+            indexName: idx_ea_content_type_status
+            columns:
+              - column:
+                  name: content_id
+              - column:
+                  name: annotation_type
+              - column:
+                  name: status
+
+  # ── 008-05: review_requests ────────────────────────────────────────────────
+  # Explicit, tracked review requests. An article can have multiple concurrent
+  # review requests (e.g. editorial + compliance simultaneously).
+  # assignee_id is the specific reviewer; assignee_role is used for role-group requests.
+  # decision values: APPROVED | APPROVED_WITH_CHANGES | CHANGES_REQUESTED | REJECTED | ESCALATED
+  - changeSet:
+      id: 008-05
+      author: system
+      changes:
+        - createTable:
+            tableName: review_requests
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: requested_by
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: requested_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: assignee_id
+                  type: uuid
+              - column:
+                  name: assignee_role
+                  type: varchar(50)
+              - column:
+                  name: review_type
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notes
+                  type: text
+              - column:
+                  name: decision
+                  type: varchar(30)
+              - column:
+                  name: decision_note
+                  type: text
+              - column:
+                  name: completed_by
+                  type: uuid
+              - column:
+                  name: completed_at
+                  type: timestamptz
+              - column:
+                  name: due_date
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+
+  # ── 008-06: Indexes for review_requests ───────────────────────────────────
+  - changeSet:
+      id: 008-06
+      author: system
+      changes:
+        - createIndex:
+            tableName: review_requests
+            indexName: idx_rr_content_id
+            columns:
+              - column:
+                  name: content_id
+        - createIndex:
+            tableName: review_requests
+            indexName: idx_rr_assignee_id
+            columns:
+              - column:
+                  name: assignee_id
+        - createIndex:
+            tableName: review_requests
+            indexName: idx_rr_brand_status
+            columns:
+              - column:
+                  name: brand_id
+              - column:
+                  name: status
+        - createIndex:
+            tableName: review_requests
+            indexName: idx_rr_assignee_status
+            columns:
+              - column:
+                  name: assignee_id
+              - column:
+                  name: status
+
+  # ── 008-07: editorial_tasks ────────────────────────────────────────────────
+  # Actionable items linked to an article and optionally to a comment or annotation.
+  # priority: LOW | NORMAL | HIGH | URGENT
+  # status:   OPEN | IN_PROGRESS | COMPLETED | CANCELLED
+  - changeSet:
+      id: 008-07
+      author: system
+      changes:
+        - createTable:
+            tableName: editorial_tasks
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: linked_comment_id
+                  type: uuid
+              - column:
+                  name: linked_annotation_id
+                  type: uuid
+              - column:
+                  name: created_by
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: assignee_id
+                  type: uuid
+              - column:
+                  name: due_date
+                  type: timestamptz
+              - column:
+                  name: priority
+                  type: varchar(10)
+                  defaultValue: NORMAL
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: OPEN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completed_by
+                  type: uuid
+              - column:
+                  name: completed_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+              - column:
+                  name: updated_by
+                  type: uuid
+
+  # ── 008-08: Indexes for editorial_tasks ───────────────────────────────────
+  - changeSet:
+      id: 008-08
+      author: system
+      changes:
+        - createIndex:
+            tableName: editorial_tasks
+            indexName: idx_et_content_id
+            columns:
+              - column:
+                  name: content_id
+        - createIndex:
+            tableName: editorial_tasks
+            indexName: idx_et_assignee_status
+            columns:
+              - column:
+                  name: assignee_id
+              - column:
+                  name: status
+        - createIndex:
+            tableName: editorial_tasks
+            indexName: idx_et_brand_status
+            columns:
+              - column:
+                  name: brand_id
+              - column:
+                  name: status
+
+  # ── 008-09: in_app_notifications ──────────────────────────────────────────
+  # Per-user editorial notification inbox.
+  # SEPARATE from the existing `notifications` table which is subscriber email marketing.
+  # notification_type values defined in InAppNotificationType enum.
+  - changeSet:
+      id: 008-09
+      author: system
+      changes:
+        - createTable:
+            tableName: in_app_notifications
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+              - column:
+                  name: notification_type
+                  type: varchar(60)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+              - column:
+                  name: actor_id
+                  type: uuid
+              - column:
+                  name: actor_name
+                  type: varchar(255)
+              - column:
+                  name: message
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: link_path
+                  type: varchar(500)
+              - column:
+                  name: read
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: read_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+
+  # ── 008-10: Indexes for in_app_notifications ───────────────────────────────
+  - changeSet:
+      id: 008-10
+      author: system
+      changes:
+        - createIndex:
+            tableName: in_app_notifications
+            indexName: idx_ian_user_id
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: in_app_notifications
+            indexName: idx_ian_user_unread
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: read
+        - createIndex:
+            tableName: in_app_notifications
+            indexName: idx_ian_content_id
+            columns:
+              - column:
+                  name: content_id
+
+  # ── 008-11: edit_locks ────────────────────────────────────────────────────
+  # PostgreSQL-based edit lock for cross-user conflict detection.
+  # Unique constraint on content_id enforces one lock at a time.
+  # expires_at = acquired_at + 30 min; renewed by heartbeat every 20s.
+  # A background job clears stale locks where expires_at < NOW().
+  - changeSet:
+      id: 008-11
+      author: system
+      changes:
+        - createTable:
+            tableName: edit_locks
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_role
+                  type: varchar(50)
+              - column:
+                  name: acquired_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: heartbeat_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+
+  # ── 008-12: Indexes for edit_locks ────────────────────────────────────────
+  - changeSet:
+      id: 008-12
+      author: system
+      changes:
+        - createIndex:
+            tableName: edit_locks
+            indexName: idx_el_user_id
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: edit_locks
+            indexName: idx_el_expires_at
+            columns:
+              - column:
+                  name: expires_at
+
+  # ── 008-13: Add FACT_CHECKER and RESEARCH_REVIEWER to BrandRole ───────────
+  # No schema change needed: brand_assignments.role is VARCHAR(50).
+  # This changeSet records the semantic addition as a data migration note.
+  # New valid values: FACT_CHECKER (priority 15), RESEARCH_REVIEWER (priority 18)
+  # sitting between AUTHOR(10) and EDITOR(20) in the BrandRole enum.
+  - changeSet:
+      id: 008-13
+      author: system
+      changes:
+        - sql:
+            comment: "Document new BrandRole values FACT_CHECKER and RESEARCH_REVIEWER — enforced at application level"
+            sql: "SELECT 1; -- FACT_CHECKER(15) and RESEARCH_REVIEWER(18) added to BrandRole enum in application code"

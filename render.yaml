@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: allocator-backend-staging
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: staging
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://ep-small-hat-ava4mzt3-pooler.c-11.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: MAILCHIMP_API_KEY
+        sync: false
+      - key: MANSA_API_KEY
+        sync: false
+
+  - type: web
+    name: allocator-backend-prod
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://ep-misty-violet-avy8q9mq-pooler.c-11.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: MAILCHIMP_API_KEY
+        sync: false
+      - key: MANSA_API_KEY
+        sync: false

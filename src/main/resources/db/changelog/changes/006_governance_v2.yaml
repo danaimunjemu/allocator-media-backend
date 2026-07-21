@@ -1,0 +1,84 @@
+databaseChangeLog:
+
+  # ── 006-01: Add archived_at to contents ───────────────────────────────────
+  - changeSet:
+      id: 006-01
+      author: system
+      changes:
+        - addColumn:
+            tableName: contents
+            columns:
+              - column:
+                  name: archived_at
+                  type: timestamptz
+
+  # ── 006-02: Add scheduled_by to contents ──────────────────────────────────
+  - changeSet:
+      id: 006-02
+      author: system
+      changes:
+        - addColumn:
+            tableName: contents
+            columns:
+              - column:
+                  name: scheduled_by
+                  type: uuid
+
+  # ── 006-03: Add compliance_required flag to contents ──────────────────────
+  # Derived at query time from contentType; this column allows overrides per item.
+  - changeSet:
+      id: 006-03
+      author: system
+      changes:
+        - addColumn:
+            tableName: contents
+            columns:
+              - column:
+                  name: compliance_required
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+  # ── 006-04: Add brand_role to brand_assignments ────────────────────────────
+  # brand_assignments.role already exists; this adds the canonical enum values.
+  # No schema change needed — role is already VARCHAR(50).
+  # Seed index for audit query performance.
+  - changeSet:
+      id: 006-04
+      author: system
+      changes:
+        - createIndex:
+            tableName: workflow_audit_log
+            indexName: idx_wal_event_type
+            columns:
+              - column:
+                  name: event_type
+
+  # ── 006-05: Index for filtered audit queries ───────────────────────────────
+  - changeSet:
+      id: 006-05
+      author: system
+      changes:
+        - createIndex:
+            tableName: workflow_audit_log
+            indexName: idx_wal_brand_timestamp
+            columns:
+              - column:
+                  name: brand_id
+              - column:
+                  name: timestamp
+
+  # ── 006-06: Index version group queries ───────────────────────────────────
+  - changeSet:
+      id: 006-06
+      author: system
+      changes:
+        - createIndex:
+            tableName: contents
+            indexName: idx_content_version_group
+            columns:
+              - column:
+                  name: parent_content_id
+              - column:
+                  name: version_number

@@ -1,0 +1,122 @@
+databaseChangeLog:
+
+  # ── 004-01: Add versioning fields to contents ──────────────────────────────
+  - changeSet:
+      id: 004-01
+      author: system
+      changes:
+        - addColumn:
+            tableName: contents
+            columns:
+              - column:
+                  name: version_number
+                  type: integer
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: parent_content_id
+                  type: uuid
+              - column:
+                  name: latest_version
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  # ── 004-02: Add compliance fields to contents ──────────────────────────────
+  - changeSet:
+      id: 004-02
+      author: system
+      changes:
+        - addColumn:
+            tableName: contents
+            columns:
+              - column:
+                  name: compliance_approved
+                  type: boolean
+              - column:
+                  name: compliance_approved_by
+                  type: uuid
+              - column:
+                  name: compliance_approved_at
+                  type: timestamptz
+
+  # ── 004-03: Create brand_assignments table ─────────────────────────────────
+  - changeSet:
+      id: 004-03
+      author: system
+      changes:
+        - createTable:
+            tableName: brand_assignments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: assigned_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: assigned_by
+                  type: uuid
+
+  # ── 004-04: Unique constraint on brand_assignments(user_id, brand_id) ──────
+  - changeSet:
+      id: 004-04
+      author: system
+      changes:
+        - addUniqueConstraint:
+            tableName: brand_assignments
+            columnNames: user_id, brand_id
+            constraintName: uq_brand_assignment_user_brand
+
+  # ── 004-05: Indexes ────────────────────────────────────────────────────────
+  - changeSet:
+      id: 004-05
+      author: system
+      changes:
+        - createIndex:
+            tableName: brand_assignments
+            indexName: idx_brand_assignment_user_id
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: brand_assignments
+            indexName: idx_brand_assignment_brand_id
+            columns:
+              - column:
+                  name: brand_id
+        - createIndex:
+            tableName: contents
+            indexName: idx_content_parent_content_id
+            columns:
+              - column:
+                  name: parent_content_id
+        - createIndex:
+            tableName: contents
+            indexName: idx_content_latest_version
+            columns:
+              - column:
+                  name: latest_version

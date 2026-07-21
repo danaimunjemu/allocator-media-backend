@@ -1,0 +1,70 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 005-01-citation-import-history
+      author: allocator
+      changes:
+        - createTable:
+            tableName: citation_import_history
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: raw_input
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: detected_identifier_type
+                  type: VARCHAR(50)
+              - column:
+                  name: detected_identifier_value
+                  type: VARCHAR(500)
+              - column:
+                  name: extractor_used
+                  type: VARCHAR(100)
+              - column:
+                  name: confidence
+                  type: INTEGER
+              - column:
+                  name: resource_type
+                  type: VARCHAR(50)
+              - column:
+                  name: created_reference_id
+                  type: uuid
+              - column:
+                  name: requires_manual_completion
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: failure_reason
+                  type: TEXT
+              - column:
+                  name: created_by_user_id
+                  type: uuid
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 005-02-citation-history-indexes
+      author: allocator
+      changes:
+        - createIndex:
+            indexName: idx_citation_history_user
+            tableName: citation_import_history
+            columns:
+              - column:
+                  name: created_by_user_id
+        - createIndex:
+            indexName: idx_citation_history_created_at
+            tableName: citation_import_history
+            columns:
+              - column:
+                  name: created_at

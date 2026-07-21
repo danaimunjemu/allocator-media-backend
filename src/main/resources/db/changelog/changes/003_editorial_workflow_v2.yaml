@@ -1,0 +1,144 @@
+databaseChangeLog:
+
+  # ─── Workflow timestamp and actor columns on contents ────────────────────────
+
+  - changeSet:
+      id: 003-01-contents-workflow-columns
+      author: allocator-editorial
+      changes:
+        - addColumn:
+            tableName: contents
+            columns:
+              - column:
+                  name: submitted_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: submitted_by
+                  type: UUID
+              - column:
+                  name: approved_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: approved_by
+                  type: UUID
+              - column:
+                  name: published_by
+                  type: UUID
+              - column:
+                  name: rejected_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: rejected_by
+                  type: UUID
+              - column:
+                  name: rejection_reason
+                  type: TEXT
+
+  # ─── Migrate SCHEDULED → APPROVED (SCHEDULED state is removed) ───────────────
+
+  - changeSet:
+      id: 003-02-migrate-scheduled-to-approved
+      author: allocator-editorial
+      comment: >
+        The SCHEDULED workflow state is replaced by APPROVED + scheduledAt metadata.
+        All existing SCHEDULED content is migrated to APPROVED so the auto-publisher
+        can pick it up via: status=APPROVED AND scheduledAt <= NOW().
+      changes:
+        - sql:
+            sql: >
+              UPDATE contents
+              SET status = 'APPROVED',
+                  approved_at = NOW(),
+                  approved_by = '00000000-0000-0000-0000-000000000001'
+              WHERE status = 'SCHEDULED';
+
+  # ─── workflow_audit_log table ────────────────────────────────────────────────
+
+  - changeSet:
+      id: 003-03-create-workflow-audit-log
+      author: allocator-editorial
+      changes:
+        - createTable:
+            tableName: workflow_audit_log
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: UUID
+              - column:
+                  name: event_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_id
+                  type: UUID
+              - column:
+                  name: actor_role
+                  type: VARCHAR(50)
+              - column:
+                  name: from_status
+                  type: VARCHAR(50)
+              - column:
+                  name: to_status
+                  type: VARCHAR(50)
+              - column:
+                  name: reason
+                  type: TEXT
+              - column:
+                  name: timestamp
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: NOW()
+
+        - createIndex:
+            tableName: workflow_audit_log
+            indexName: idx_wal_content_id
+            columns:
+              - column:
+                  name: content_id
+
+        - createIndex:
+            tableName: workflow_audit_log
+            indexName: idx_wal_brand_id
+            columns:
+              - column:
+                  name: brand_id
+
+        - createIndex:
+            tableName: workflow_audit_log
+            indexName: idx_wal_actor_id
+            columns:
+              - column:
+                  name: actor_id
+
+        - createIndex:
+            tableName: workflow_audit_log
+            indexName: idx_wal_timestamp
+            columns:
+              - column:
+                  name: timestamp
+
+  # ─── Index: contents.scheduled_at for auto-publisher performance ─────────────
+
+  - changeSet:
+      id: 003-04-index-contents-scheduled-at
+      author: allocator-editorial
+      changes:
+        - createIndex:
+            tableName: contents
+            indexName: idx_content_scheduled_at
+            columns:
+              - column:
+                  name: scheduled_at

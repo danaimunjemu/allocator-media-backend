@@ -1,0 +1,44 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-content-author-links
+      author: allocator
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: content_author_links
+      changes:
+        - createTable:
+            tableName: content_author_links
+            columns:
+              - column:
+                  name: content_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+        - addPrimaryKey:
+            tableName: content_author_links
+            columnNames: content_id, author_id
+            constraintName: pk_content_author_links
+
+        - addForeignKeyConstraint:
+            baseTableName: content_author_links
+            baseColumnNames: content_id
+            constraintName: fk_cal_content
+            referencedTableName: contents
+            referencedColumnNames: id
+            onDelete: CASCADE
+
+        - addForeignKeyConstraint:
+            baseTableName: content_author_links
+            baseColumnNames: author_id
+            constraintName: fk_cal_author
+            referencedTableName: authors
+            referencedColumnNames: id
+            onDelete: CASCADE

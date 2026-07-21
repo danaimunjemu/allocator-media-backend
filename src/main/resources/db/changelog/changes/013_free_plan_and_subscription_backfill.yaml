@@ -1,0 +1,68 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 013 — Free Plan + Subscriber Backfill
+  # Self-service reader signup never had a FREE plan to attach to, so readers
+  # never got a user_subscriptions row and never showed up under Subscriptions
+  # in the admin portal. Seeds the missing FREE plan and backfills a FREE
+  # subscription for any existing READER who doesn't already have one.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 013-01-seed-free-plan
+      author: allocator
+      preConditions:
+        onFail: MARK_RAN
+        sqlCheck:
+          expectedResult: 0
+          sql: SELECT COUNT(*) FROM plans WHERE tier = 'FREE'
+      changes:
+        - insert:
+            tableName: plans
+            columns:
+              - column:
+                  name: id
+                  valueComputed: gen_random_uuid()
+              - column:
+                  name: name
+                  value: Free
+              - column:
+                  name: amount
+                  valueNumeric: 0.00
+              - column:
+                  name: currency
+                  value: USD
+              - column:
+                  name: interval
+                  value: month
+              - column:
+                  name: tier
+                  value: FREE
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: now()
+              - column:
+                  name: updated_at
+                  valueComputed: now()
+
+  - changeSet:
+      id: 013-02-backfill-reader-subscriptions
+      author: allocator
+      changes:
+        - sql:
+            sql: >
+              INSERT INTO user_subscriptions (id, user_id, email, plan_id, status, cancel_at_period_end, created_at, updated_at)
+              SELECT gen_random_uuid(), reader.id, reader.email, free_plan.id, 'ACTIVE', false, now(), now()
+              FROM (
+                SELECT DISTINCT u.id, u.email
+                FROM users u
+                JOIN user_roles ur ON ur.user_id = u.id
+                JOIN roles r ON r.id = ur.role_id AND r.name = 'READER'
+              ) reader
+              CROSS JOIN (SELECT id FROM plans WHERE tier = 'FREE' LIMIT 1) free_plan
+              WHERE NOT EXISTS (
+                SELECT 1 FROM user_subscriptions us WHERE us.user_id = reader.id
+              )

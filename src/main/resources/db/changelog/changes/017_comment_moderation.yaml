@@ -1,0 +1,39 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 017 — Comment moderation
+  # Admin/super-admin can "remove" a public comment with a reason (distinct
+  # from an author's own self-delete) — the comment's slot in the thread stays
+  # visible with a moderation notice instead of disappearing entirely.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 017-01
+      author: system
+      changes:
+        - addColumn:
+            tableName: public_comments
+            columns:
+              - column:
+                  name: removed_by
+                  type: uuid
+              - column:
+                  name: removed_at
+                  type: timestamptz
+              - column:
+                  name: removal_reason
+                  type: varchar(50)
+
+  # edited_at is set explicitly by updateComment() only — inferring "was this
+  # edited" from BaseEntity.updatedAt drift was wrong, since remove/restore
+  # actions also bump updatedAt without the author touching the body at all.
+  - changeSet:
+      id: 017-02
+      author: system
+      changes:
+        - addColumn:
+            tableName: public_comments
+            columns:
+              - column:
+                  name: edited_at
+                  type: timestamptz

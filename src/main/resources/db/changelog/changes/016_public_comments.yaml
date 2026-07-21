@@ -1,0 +1,216 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 016 — Public (reader-facing) comments
+  # Tables: public_comments, public_comment_likes, public_comment_votes
+  # Separate from editorial_comments (008), which is the internal editorial
+  # review tool — this is for logged-in readers commenting on published content.
+  # root_comment_id flattens replies-to-replies under the top-level ancestor
+  # (one visual level of nesting); parent_comment_id keeps the immediate
+  # "replying to" relationship for display.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 016-01
+      author: system
+      changes:
+        - createTable:
+            tableName: public_comments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: root_comment_id
+                  type: uuid
+              - column:
+                  name: parent_comment_id
+                  type: uuid
+              - column:
+                  name: author_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_avatar_url
+                  type: varchar(1000)
+              - column:
+                  name: body
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+              - column:
+                  name: created_by
+                  type: uuid
+              - column:
+                  name: updated_by
+                  type: uuid
+
+  - changeSet:
+      id: 016-02
+      author: system
+      changes:
+        - createIndex:
+            tableName: public_comments
+            indexName: idx_pc_content_id
+            columns:
+              - column:
+                  name: content_id
+        - createIndex:
+            tableName: public_comments
+            indexName: idx_pc_brand_id
+            columns:
+              - column:
+                  name: brand_id
+        - createIndex:
+            tableName: public_comments
+            indexName: idx_pc_root_comment_id
+            columns:
+              - column:
+                  name: root_comment_id
+        - createIndex:
+            tableName: public_comments
+            indexName: idx_pc_author_id
+            columns:
+              - column:
+                  name: author_id
+        - createIndex:
+            tableName: public_comments
+            indexName: idx_pc_content_status
+            columns:
+              - column:
+                  name: content_id
+              - column:
+                  name: status
+
+  - changeSet:
+      id: 016-03
+      author: system
+      changes:
+        - createTable:
+            tableName: public_comment_likes
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: comment_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: public_comment_likes
+            baseColumnNames: comment_id
+            referencedTableName: public_comments
+            referencedColumnNames: id
+            constraintName: fk_pcl_comment
+            onDelete: CASCADE
+        - addUniqueConstraint:
+            tableName: public_comment_likes
+            columnNames: comment_id, user_id
+            constraintName: uq_pcl_comment_user
+        - createIndex:
+            tableName: public_comment_likes
+            indexName: idx_pcl_comment_id
+            columns:
+              - column:
+                  name: comment_id
+
+  - changeSet:
+      id: 016-04
+      author: system
+      changes:
+        - createTable:
+            tableName: public_comment_votes
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: comment_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: value
+                  type: smallint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: public_comment_votes
+            baseColumnNames: comment_id
+            referencedTableName: public_comments
+            referencedColumnNames: id
+            constraintName: fk_pcv_comment
+            onDelete: CASCADE
+        - addUniqueConstraint:
+            tableName: public_comment_votes
+            columnNames: comment_id, user_id
+            constraintName: uq_pcv_comment_user
+        - createIndex:
+            tableName: public_comment_votes
+            indexName: idx_pcv_comment_id
+            columns:
+              - column:
+                  name: comment_id

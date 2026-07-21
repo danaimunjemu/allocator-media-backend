@@ -1,0 +1,120 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 010 — Platform Settings
+  # A single key-value table for global platform configuration.
+  # Seeded with sensible defaults on first run.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 010-01-create-platform-settings
+      author: allocator
+      changes:
+        - createTable:
+            tableName: platform_settings
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: setting_key
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: setting_value
+                  type: text
+                  constraints:
+                    nullable: true
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+
+  - changeSet:
+      id: 010-02-platform-settings-index
+      author: allocator
+      changes:
+        - createIndex:
+            indexName: idx_platform_settings_key
+            tableName: platform_settings
+            columns:
+              - column:
+                  name: setting_key
+
+  - changeSet:
+      id: 010-03-platform-settings-defaults
+      author: allocator
+      changes:
+        - insert:
+            tableName: platform_settings
+            columns:
+              - column:
+                  name: id
+                  valueComputed: gen_random_uuid()
+              - column:
+                  name: setting_key
+                  value: platform.url
+              - column:
+                  name: setting_value
+                  value: https://allocator.com
+        - insert:
+            tableName: platform_settings
+            columns:
+              - column:
+                  name: id
+                  valueComputed: gen_random_uuid()
+              - column:
+                  name: setting_key
+                  value: platform.language
+              - column:
+                  name: setting_value
+                  value: en
+        - insert:
+            tableName: platform_settings
+            columns:
+              - column:
+                  name: id
+                  valueComputed: gen_random_uuid()
+              - column:
+                  name: setting_key
+                  value: platform.timezone
+              - column:
+                  name: setting_value
+                  value: Africa/Johannesburg
+        - insert:
+            tableName: platform_settings
+            columns:
+              - column:
+                  name: id
+                  valueComputed: gen_random_uuid()
+              - column:
+                  name: setting_key
+                  value: platform.currency
+              - column:
+                  name: setting_value
+                  value: USD
+        - insert:
+            tableName: platform_settings
+            columns:
+              - column:
+                  name: id
+                  valueComputed: gen_random_uuid()
+              - column:
+                  name: setting_key
+                  value: platform.maintenance_mode
+              - column:
+                  name: setting_value
+                  value: "false"

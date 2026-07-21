@@ -1,0 +1,102 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 014 — Subscribers Table
+  # Readers/end-users were living in user_subscriptions, a thin billing-only
+  # table that mixed conceptually with the staff `users` table. This promotes
+  # it into a first-class `subscribers` table carrying profile + engagement
+  # metadata (name, account status, last active, location/device/browser) so
+  # the admin Subscribers page has real data to show and readers are fully
+  # decoupled from staff/administrator records.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 014-01-rename-user-subscriptions-to-subscribers
+      author: allocator
+      preConditions:
+        onFail: MARK_RAN
+        and:
+          - tableExists:
+              tableName: user_subscriptions
+          - not:
+              tableExists:
+                tableName: subscribers
+      changes:
+        - renameTable:
+            oldTableName: user_subscriptions
+            newTableName: subscribers
+
+  - changeSet:
+      id: 014-02-add-subscriber-profile-columns
+      author: allocator
+      preConditions:
+        onFail: MARK_RAN
+        and:
+          - tableExists:
+              tableName: subscribers
+          - not:
+              columnExists:
+                tableName: subscribers
+                columnName: first_name
+      changes:
+        - addColumn:
+            tableName: subscribers
+            columns:
+              - column:
+                  name: first_name
+                  type: varchar(255)
+              - column:
+                  name: last_name
+                  type: varchar(255)
+              - column:
+                  name: account_status
+                  type: varchar(20)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_active_at
+                  type: timestamp
+              - column:
+                  name: location
+                  type: varchar(255)
+              - column:
+                  name: primary_device
+                  type: varchar(255)
+              - column:
+                  name: web_browser
+                  type: varchar(255)
+
+  # Backfill name from users, last-active/device/browser from login_history —
+  # best-effort, all idempotent (only touches NULL columns).
+  - changeSet:
+      id: 014-03-backfill-subscriber-profile-data
+      author: allocator
+      changes:
+        - sql:
+            sql: >
+              UPDATE subscribers s SET first_name = u.first_name, last_name = u.last_name
+              FROM users u
+              WHERE s.user_id = u.id AND s.first_name IS NULL
+        - sql:
+            sql: >
+              UPDATE subscribers s SET last_active_at = COALESCE(
+                (SELECT MAX(lh.login_at) FROM login_history lh WHERE lh.user_id = s.user_id),
+                s.updated_at
+              )
+              WHERE s.last_active_at IS NULL
+        - sql:
+            sql: >
+              UPDATE subscribers s SET
+                primary_device = latest.device_name,
+                web_browser = latest.browser
+              FROM (
+                SELECT DISTINCT ON (user_id) user_id, device_name, browser
+                FROM user_sessions
+                WHERE user_id IS NOT NULL
+                ORDER BY user_id, last_active DESC
+              ) latest
+              WHERE s.user_id = latest.user_id AND s.primary_device IS NULL
+        - sql:
+            sql: >
+              UPDATE subscribers SET location = 'Unknown' WHERE location IS NULL

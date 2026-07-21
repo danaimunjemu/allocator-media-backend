@@ -1,0 +1,140 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: allocator-backend
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/allocator_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  security:
+    oauth2:
+      client:
+        registration:
+          # Google is OIDC and uses Spring's built-in CommonOAuth2Provider —
+          # no manual authorization/token/user-info URIs needed.
+          #
+          # NOTE: Spring Boot's OAuth2ClientProperties requires a non-empty
+          # client-id/secret for every configured registration, even ones never
+          # used — so these fall back to an obviously-fake placeholder (never a
+          # blank string) purely so the app boots without real credentials.
+          # Attempting to actually sign in with a placeholder simply fails at
+          # the provider's consent screen ("invalid client") rather than
+          # crashing the app on startup. Set the real env vars to make it work.
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:unconfigured-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:unconfigured-google-client-secret}
+            scope: openid, profile, email
+          # Facebook is plain OAuth2 (not OIDC) — see the `provider.facebook`
+          # block below for its endpoints and user-info shape.
+          facebook:
+            client-id: ${FACEBOOK_CLIENT_ID:unconfigured-facebook-client-id}
+            client-secret: ${FACEBOOK_CLIENT_SECRET:unconfigured-facebook-client-secret}
+            scope: public_profile, email
+          # LinkedIn's OIDC ("Sign In with LinkedIn using OpenID Connect")
+          # endpoints aren't in Spring's built-in registry — configured manually
+          # in `provider.linkedin` below. Verify these against LinkedIn's current
+          # developer docs before wiring real credentials; they occasionally move.
+          linkedin:
+            client-id: ${LINKEDIN_CLIENT_ID:unconfigured-linkedin-client-id}
+            client-secret: ${LINKEDIN_CLIENT_SECRET:unconfigured-linkedin-client-secret}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid, profile, email
+            client-name: LinkedIn
+        provider:
+          facebook:
+            authorization-uri: https://www.facebook.com/v19.0/dialog/oauth
+            token-uri: https://graph.facebook.com/v19.0/oauth/access_token
+            user-info-uri: https://graph.facebook.com/me?fields=id,name,email,first_name,last_name,picture
+            user-name-attribute: id
+          linkedin:
+            authorization-uri: https://www.linkedin.com/oauth/v2/authorization
+            token-uri: https://www.linkedin.com/oauth/v2/accessToken
+            user-info-uri: https://api.linkedin.com/v2/userinfo
+            jwk-set-uri: https://www.linkedin.com/oauth/openid/jwks
+            user-name-attribute: sub
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-64-characters-long-for-hs512}
+    expiration: 900000 # 15 minutes
+    refreshExpiration: 604800000 # 7 days
+  upload:
+    dir: uploads/
+  geoip:
+    database-path: ${GEOIP_DB_PATH:geoip/GeoLite2-City.mmdb}
+  frontend-url: ${FRONTEND_URL:http://localhost:3001}
+
+stripe:
+  # Fallback only — the admin Settings > Integrations page stores the real key
+  # encrypted in platform_settings and takes priority over this at runtime
+  # (see StripeConfig). Per-plan Stripe price/product IDs live on the Plan
+  # entity in the database (set automatically by PlanService), not here.
+  secret-key: ${STRIPE_SECRET_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  urls:
+    success: ${STRIPE_SUCCESS_URL:http://localhost:3001/account/subscription/success}
+    cancel: ${STRIPE_CANCEL_URL:http://localhost:3001/pricing}
+    portal-return: ${STRIPE_PORTAL_RETURN_URL:http://localhost:3001/account}
+
+mailchimp:
+  api-key: ${MAILCHIMP_API_KEY:}
+  list-id: ${MAILCHIMP_LIST_ID:}
+
+mansa:
+  # Fallback only — Settings > Integrations stores the real key encrypted in
+  # platform_settings and takes priority over this at runtime, read live on
+  # every cache refresh by MansaMarketDataService (no restart needed after
+  # saving a new key there).
+  api-key: ${MANSA_API_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    prometheus:
+      enabled: true
+  health:
+    mail:
+      enabled: false
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    root: INFO
+    com.allocator: DEBUG

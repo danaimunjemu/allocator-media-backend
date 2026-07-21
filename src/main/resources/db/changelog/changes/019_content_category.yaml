@@ -1,0 +1,34 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 019 — Real content-category relationship
+  # Content and Category previously had no real link at all (the "category"
+  # editors picked in the admin UI was only ever written into the freeform
+  # `metadata` jsonb blob, never validated or queryable). This adds a real
+  # category_id column with a foreign key to categories(id), so content can
+  # actually be filtered/grouped by category.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 019-01
+      author: system
+      changes:
+        - addColumn:
+            tableName: contents
+            columns:
+              - column:
+                  name: category_id
+                  type: uuid
+        - createIndex:
+            tableName: contents
+            indexName: idx_content_category_id
+            columns:
+              - column:
+                  name: category_id
+        - addForeignKeyConstraint:
+            baseTableName: contents
+            baseColumnNames: category_id
+            referencedTableName: categories
+            referencedColumnNames: id
+            constraintName: fk_content_category
+            onDelete: SET NULL

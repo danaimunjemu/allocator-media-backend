@@ -1,0 +1,172 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 020 — Newsletter feature
+  # Extends the existing `campaigns` table (already the backend of the admin's
+  # /newsletters pages, previously topic-only with a DRAFT/SENDING/SENT
+  # lifecycle) into a full newsletter: brand + minimum-tier targeting, a
+  # draft → in_review → scheduled → sent editorial workflow, a thumbnail, a
+  # preview/preheader text, and a scheduled send time. Adds `campaign_items`
+  # (ordered content links + section separators that make up the newsletter
+  # body) and `campaign_audit_log` (append-only workflow transition history,
+  # mirroring contentservice's workflow_audit_log pattern but campaign-scoped).
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 020-01
+      author: system
+      changes:
+        - addColumn:
+            tableName: campaigns
+            columns:
+              - column:
+                  name: brand_id
+                  type: uuid
+              - column:
+                  name: preview_text
+                  type: varchar(255)
+              - column:
+                  name: thumbnail_url
+                  type: varchar(1000)
+              - column:
+                  name: min_tier
+                  type: varchar(20)
+              - column:
+                  name: scheduled_at
+                  type: timestamp
+              - column:
+                  name: created_by
+                  type: uuid
+              - column:
+                  name: submitted_by
+                  type: uuid
+              - column:
+                  name: submitted_at
+                  type: timestamp
+              - column:
+                  name: reviewed_by
+                  type: uuid
+              - column:
+                  name: reviewed_at
+                  type: timestamp
+              - column:
+                  name: rejection_reason
+                  type: text
+        - dropNotNullConstraint:
+            tableName: campaigns
+            columnName: topic
+            columnDataType: varchar(255)
+        - createIndex:
+            tableName: campaigns
+            indexName: idx_campaign_brand_id
+            columns:
+              - column:
+                  name: brand_id
+
+  - changeSet:
+      id: 020-02
+      author: system
+      changes:
+        - createTable:
+            tableName: campaign_items
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: campaign_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sort_order
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: item_type
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content_id
+                  type: uuid
+              - column:
+                  name: label
+                  type: varchar(255)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: campaign_items
+            baseColumnNames: campaign_id
+            referencedTableName: campaigns
+            referencedColumnNames: id
+            constraintName: fk_campaign_item_campaign
+            onDelete: CASCADE
+        - createIndex:
+            tableName: campaign_items
+            indexName: idx_campaign_item_campaign_id
+            columns:
+              - column:
+                  name: campaign_id
+
+  - changeSet:
+      id: 020-03
+      author: system
+      changes:
+        - createTable:
+            tableName: campaign_audit_log
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: campaign_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: brand_id
+                  type: uuid
+              - column:
+                  name: event_type
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_id
+                  type: uuid
+              - column:
+                  name: actor_role
+                  type: varchar(50)
+              - column:
+                  name: from_status
+                  type: varchar(20)
+              - column:
+                  name: to_status
+                  type: varchar(20)
+              - column:
+                  name: reason
+                  type: text
+              - column:
+                  name: timestamp
+                  type: timestamp
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: campaign_audit_log
+            indexName: idx_campaign_audit_campaign_id
+            columns:
+              - column:
+                  name: campaign_id

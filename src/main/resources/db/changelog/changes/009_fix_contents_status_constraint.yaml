@@ -1,0 +1,46 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 009 — Fix contents_status_check constraint
+  #
+  # Hibernate 6 auto-generated contents_status_check when the DB was first
+  # created. At that time the ContentStatus enum was missing APPROVED and
+  # COMPLIANCE_APPROVED, so the constraint rejects those values. This
+  # migration drops the stale constraint and recreates it with all six valid
+  # statuses from the current enum.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 009-01-fix-contents-status-check
+      author: allocator
+      comment: Drop stale Hibernate-generated status check and recreate with full enum
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE contents
+                DROP CONSTRAINT IF EXISTS contents_status_check;
+
+              ALTER TABLE contents
+                ADD CONSTRAINT contents_status_check
+                CHECK (status IN (
+                  'DRAFT',
+                  'REVIEW',
+                  'APPROVED',
+                  'COMPLIANCE_APPROVED',
+                  'PUBLISHED',
+                  'ARCHIVED'
+                ));
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE contents
+                DROP CONSTRAINT IF EXISTS contents_status_check;
+
+              ALTER TABLE contents
+                ADD CONSTRAINT contents_status_check
+                CHECK (status IN (
+                  'DRAFT',
+                  'REVIEW',
+                  'PUBLISHED',
+                  'ARCHIVED'
+                ));

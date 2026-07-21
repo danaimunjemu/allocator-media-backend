@@ -1,0 +1,20 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 021 — Newsletter editor round-trip fix
+  # `campaigns.content` stores the rendered HTML used for the sent email and
+  # PDF export. Re-opening a draft in the admin editor needs the raw TipTap
+  # editor JSON instead (same pattern as contentservice's article `content`
+  # field), so it's stored separately in `content_json`.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 021-01
+      author: system
+      changes:
+        - addColumn:
+            tableName: campaigns
+            columns:
+              - column:
+                  name: content_json
+                  type: text

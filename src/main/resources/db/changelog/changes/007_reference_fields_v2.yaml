@@ -1,0 +1,81 @@
+databaseChangeLog:
+
+  # ─── Add extended metadata fields to content_references_lib ──────────────────
+
+  - changeSet:
+      id: 007-01-reference-extended-fields
+      author: allocator
+      changes:
+        - addColumn:
+            tableName: content_references_lib
+            columns:
+              - column:
+                  name: abstract_text
+                  type: TEXT
+              - column:
+                  name: conference_title
+                  type: VARCHAR(500)
+              - column:
+                  name: conference_location
+                  type: VARCHAR(255)
+              - column:
+                  name: report_number
+                  type: VARCHAR(100)
+              - column:
+                  name: institution
+                  type: VARCHAR(500)
+              - column:
+                  name: degree
+                  type: VARCHAR(255)
+              - column:
+                  name: channel_name
+                  type: VARCHAR(255)
+              - column:
+                  name: duration
+                  type: VARCHAR(50)
+              - column:
+                  name: thumbnail_url
+                  type: VARCHAR(2000)
+              - column:
+                  name: publisher_location
+                  type: VARCHAR(255)
+              - column:
+                  name: inline_key
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: true
+
+  - changeSet:
+      id: 007-02-reference-search-indexes
+      author: allocator
+      changes:
+        - createIndex:
+            indexName: idx_references_doi
+            tableName: content_references_lib
+            columns:
+              - column:
+                  name: doi
+        - createIndex:
+            indexName: idx_references_isbn
+            tableName: content_references_lib
+            columns:
+              - column:
+                  name: isbn
+        - createIndex:
+            indexName: idx_references_url
+            tableName: content_references_lib
+            columns:
+              - column:
+                  name: url
+        - createIndex:
+            indexName: idx_references_inline_key
+            tableName: content_references_lib
+            columns:
+              - column:
+                  name: inline_key
+        - createIndex:
+            indexName: idx_references_created_by
+            tableName: content_references_lib
+            columns:
+              - column:
+                  name: created_by_user_id

@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-authors-user-id
+      author: allocator
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: authors
+                columnName: user_id
+      changes:
+        - addColumn:
+            tableName: authors
+            columns:
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: true
+                    unique: true
+
+  - changeSet:
+      id: 001-authors-user-id-index
+      author: allocator
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: idx_authors_user_id
+      changes:
+        - createIndex:
+            indexName: idx_authors_user_id
+            tableName: authors
+            columns:
+              - column:
+                  name: user_id

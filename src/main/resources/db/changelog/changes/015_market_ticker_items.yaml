@@ -1,0 +1,72 @@
+databaseChangeLog:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Migration 015 — Market Ticker Items
+  # Persisted African market ticker data (Mansa API). A scheduled job
+  # (MansaMarketDataService, every 6 hours) refreshes these rows so the
+  # public site reads from the DB instead of calling the free-tier Mansa
+  # API (100 req/day) once per visitor.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - changeSet:
+      id: 015-01-create-market-ticker-items
+      author: allocator
+      changes:
+        - createTable:
+            tableName: market_ticker_items
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: item_key
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: display_name
+                  type: varchar(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: change_percent
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sort_order
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: market_last_updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: true
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+
+  - changeSet:
+      id: 015-02-market-ticker-items-index
+      author: allocator
+      changes:
+        - createIndex:
+            indexName: idx_market_ticker_items_key
+            tableName: market_ticker_items
+            columns:
+              - column:
+                  name: item_key
