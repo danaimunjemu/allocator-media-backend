@@ -6,7 +6,7 @@ import com.allocator.mediaservice.dto.MediaUploadRequest;
 import com.allocator.mediaservice.mapper.MediaMapper;
 import com.allocator.mediaservice.model.Media;
 import com.allocator.mediaservice.repository.MediaRepository;
-import com.allocator.mediaservice.storage.LocalFileStorageService;
+import com.allocator.mediaservice.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
@@ -28,7 +28,7 @@ import java.util.UUID;
 public class MediaService {
 
     private final MediaRepository mediaRepository;
-    private final LocalFileStorageService localFileStorageService;
+    private final FileStorageService fileStorageService;
     private final MediaMapper mediaMapper;
     private final MediaEventPublisherService mediaEventPublisherService;
     private final ObjectMapper objectMapper;
@@ -43,7 +43,7 @@ public class MediaService {
 
             // Generate unique filename
             String folder = request.getFolder() != null ? request.getFolder() : "uploads";
-            String storageUrl = localFileStorageService.uploadFile(file, folder);
+            String storageUrl = fileStorageService.uploadFile(file, folder);
 
             // Create media entity
             Media media = Media.builder()
@@ -88,7 +88,7 @@ public class MediaService {
         Media media = mediaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Media not found: " + id));
 
-        Resource resource = new InputStreamResource(localFileStorageService.downloadFile(media.getFilePath()));
+        Resource resource = new InputStreamResource(fileStorageService.downloadFile(media.getFilePath()));
         return new DownloadData(media, resource);
     }
 
@@ -97,7 +97,7 @@ public class MediaService {
         Media media = mediaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Media not found: " + id));
 
-        return localFileStorageService.generatePresignedUrl(media.getFilePath(), expiryMinutes);
+        return fileStorageService.generatePresignedUrl(media.getFilePath(), expiryMinutes);
     }
 
     @Transactional(readOnly = true)
@@ -128,7 +128,7 @@ public class MediaService {
                 .orElseThrow(() -> new IllegalArgumentException("Media not found: " + id));
 
         // Delete from storage
-        localFileStorageService.deleteFile(media.getFilePath());
+        fileStorageService.deleteFile(media.getFilePath());
 
         // Delete from database
         mediaRepository.deleteById(id);

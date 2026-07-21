@@ -3,6 +3,7 @@ package com.allocator.mediaservice.controller;
 import com.allocator.mediaservice.storage.LocalFileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
@@ -12,10 +13,13 @@ import org.springframework.web.bind.annotation.*;
 import java.io.InputStream;
 import java.net.URLConnection;
 
+// Only meaningful under local storage — Cloudinary (staging) serves files
+// directly from its own CDN, so uploaded URLs never point back at this route.
 @RestController
 @RequestMapping("/media-service/api/v1/media/files")
 @RequiredArgsConstructor
 @Slf4j
+@Profile("!staging")
 public class MediaFileController {
 
     private final LocalFileStorageService storageService;

@@ -2,6 +2,7 @@ package com.allocator.mediaservice.storage;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,9 +16,14 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.UUID;
 
+// Writes to the container's local disk — fine for local dev, but that disk is
+// ephemeral on most PaaS deployments (e.g. Render), so uploads vanish on every
+// redeploy. Not used for "staging" (see CloudinaryFileStorageService); still
+// the default everywhere else until other environments are migrated too.
 @Service
 @Slf4j
-public class LocalFileStorageService {
+@Profile("!staging")
+public class LocalFileStorageService implements FileStorageService {
 
     @Value("${media.local.upload-dir:uploads}")
     private String uploadDir;

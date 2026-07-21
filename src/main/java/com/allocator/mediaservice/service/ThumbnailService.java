@@ -1,6 +1,6 @@
 package com.allocator.mediaservice.service;
 
-import com.allocator.mediaservice.storage.LocalFileStorageService;
+import com.allocator.mediaservice.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
@@ -19,7 +19,7 @@ import java.io.InputStream;
 @Slf4j
 public class ThumbnailService {
 
-    private final LocalFileStorageService localFileStorageService;
+    private final FileStorageService fileStorageService;
 
     private static final int THUMBNAIL_WIDTH = 300;
     private static final int MEDIUM_WIDTH = 800;
@@ -90,7 +90,7 @@ public class ThumbnailService {
 
         // Upload thumbnail to MinIO
         String folder = "thumbnails";
-        return localFileStorageService.uploadFile(thumbnailFile, folder);
+        return fileStorageService.uploadFile(thumbnailFile, folder);
     }
 
     private String generateThumbnailFileName(String originalFileName, String suffix) {

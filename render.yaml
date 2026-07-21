@@ -17,6 +17,12 @@ services:
         value: https://allocator-backend-staging.onrender.com/media-service/api/v1/media/files
       - key: APP_PUBLIC_API_URL
         value: https://allocator-backend-staging.onrender.com
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
       - key: DB_USERNAME
         sync: false
       - key: DB_PASSWORD
