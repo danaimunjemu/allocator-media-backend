@@ -1,5 +1,9 @@
 server:
   port: ${PORT:8080}
+  tomcat:
+    threads:
+      max: ${TOMCAT_MAX_THREADS:20}
+      min-spare: ${TOMCAT_MIN_THREADS:5}
 
 spring:
   application:
