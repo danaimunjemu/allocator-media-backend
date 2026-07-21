@@ -4,6 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -21,6 +22,11 @@ public class SmtpEmailProvider implements EmailProvider {
     private final JavaMailSender mailSender;
     private final NotificationMetrics metrics;
 
+    // Mailpit (local dev) doesn't validate this, but real SMTP servers reject
+    // messages with no From address entirely.
+    @Value("${app.mail.from:no-reply@allocatormedia.com}")
+    private String fromAddress;
+
     @Override
     public void sendEmail(String to, String subject, String htmlBody) {
         log.info("Sending SMTP email to: {}", to);
@@ -28,6 +34,7 @@ public class SmtpEmailProvider implements EmailProvider {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+            helper.setFrom(fromAddress);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
