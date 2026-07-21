@@ -13,6 +13,8 @@ services:
         value: staging
       - key: SPRING_DATASOURCE_URL
         value: jdbc:postgresql://ep-small-hat-ava4mzt3-pooler.c-11.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - key: MEDIA_LOCAL_BASE_URL
+        value: https://allocator-backend-staging.onrender.com/media-service/api/v1/media/files
       - key: DB_USERNAME
         sync: false
       - key: DB_PASSWORD
@@ -44,6 +46,8 @@ services:
         value: prod
       - key: SPRING_DATASOURCE_URL
         value: jdbc:postgresql://ep-misty-violet-avy8q9mq-pooler.c-11.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - key: MEDIA_LOCAL_BASE_URL
+        value: https://allocator-backend-prod.onrender.com/media-service/api/v1/media/files
       - key: DB_USERNAME
         sync: false
       - key: DB_PASSWORD
