@@ -30,9 +30,9 @@ spring:
     properties:
       mail:
         smtp:
-          auth: false
+          auth: ${SMTP_AUTH:false}
           starttls:
-            enable: false
+            enable: ${SMTP_STARTTLS:false}
   servlet:
     multipart:
       max-file-size: 50MB
