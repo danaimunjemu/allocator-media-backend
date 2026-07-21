@@ -41,6 +41,9 @@ public class NotificationEventConsumer {
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
 
+    @Value("${app.public-api-url:http://localhost:8080}")
+    private String publicApiUrl;
+
     @org.springframework.context.event.EventListener
     @org.springframework.scheduling.annotation.Async
     public void handleArticleEvents(ArticlePublishedEvent event) {
@@ -135,7 +138,7 @@ public class NotificationEventConsumer {
                 try {
                     // Add tracking pixel to body
                     String body = templateService.render(bodyTemplate, variables);
-                    body += "<img src='http://localhost:8080/tracking/open/" + notification.getId()
+                    body += "<img src='" + publicApiUrl + "/tracking/open/" + notification.getId()
                             + "' style='display:none;' />";
 
                     emailProvider.sendEmail(recipient, subject, body);
@@ -180,7 +183,7 @@ public class NotificationEventConsumer {
 
             try {
                 String body = templateService.render(bodyTemplate, variables);
-                body += "<img src='http://localhost:8080/tracking/open/" + notification.getId()
+                body += "<img src='" + publicApiUrl + "/tracking/open/" + notification.getId()
                         + "' style='display:none;' />";
 
                 emailProvider.sendEmail(event.getEmail(), subject, body);

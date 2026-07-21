@@ -48,9 +48,13 @@ public class NewsletterHtmlRenderer {
     private static final String SANS = "-apple-system, Helvetica, Arial, sans-serif";
 
     private static final String ALLOCATOR_MEDIA = "Allocator Media";
-    private static final String LOGO_URL =
-            System.getProperty("app.public-api-url", "http://localhost:8080")
-                    + "/media-service/api/v1/media/files/uploads/allocator-media-logo-stacked.jpg";
+
+    @org.springframework.beans.factory.annotation.Value("${app.public-api-url:http://localhost:8080}")
+    private String publicApiUrl;
+
+    private String logoUrl() {
+        return publicApiUrl + "/media-service/api/v1/media/files/uploads/allocator-media-logo-stacked.jpg";
+    }
 
     // Fixed reference city for the header's weather snippet (Open-Meteo, no
     // API key required) — same fallback location list the demo site's own
@@ -115,7 +119,7 @@ public class NewsletterHtmlRenderer {
                 : "";
 
         return "<div style=\"background:" + CREAM + ";padding:28px 24px;text-align:center;\">" +
-                "<img src=\"" + LOGO_URL + "\" alt=\"" + ALLOCATOR_MEDIA + "\" width=\"180\" " +
+                "<img src=\"" + logoUrl() + "\" alt=\"" + ALLOCATOR_MEDIA + "\" width=\"180\" " +
                 "style=\"width:180px;max-width:60%;height:auto;display:block;margin:0 auto 18px;\" />" +
                 "<div style=\"font-family:" + SERIF + ";font-size:24px;line-height:1.3;color:" + INK + ";font-weight:bold;margin:0 0 8px;\">" + esc(campaign.getName()) + "</div>" +
                 (campaign.getPreviewText() != null && !campaign.getPreviewText().isBlank()
